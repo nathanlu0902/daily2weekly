@@ -1,23 +1,23 @@
-
+﻿
 from openpyxl import Workbook, load_workbook
 from collections import defaultdict
-from openpyxl.styles import PatternFill,Color,Border,Side
+from openpyxl.styles import PatternFill, Color, Border, Side
 from openpyxl.utils import column_index_from_string
 
 
 class part_intersection:
 
-    def __init__(self, pn, vendor_code, site, hub, onway,vendor_name):
+    def __init__(self, pn, vendor_code, site, hub, onway, vendor_name):
         self.PN = pn
         self.vendorCode = vendor_code
         self.site = site
         self.hub = hub
         self.onway = onway
-        self.vendor_name=vendor_name
+        self.vendor_name = vendor_name
 
         self._commit = defaultdict()
         self._request = defaultdict()
-        self._delta=defaultdict()
+        self._delta = defaultdict()
 
     def load_request(self, date_list, qty_list):
 
@@ -79,17 +79,16 @@ class part_intersection:
             else:
                 self.commit_dic_aggr[key] += self.commit[date]
 
-
     def get_delta(self, cut_off_day, date_dic):
 
         i = 0
         self.delta_dic = defaultdict()
 
         for date in self.delta:
-            if date == list(self.delta.keys())[
-                    0] or date_dic[date] == cut_off_day:
+            if date_dic[date] == cut_off_day:
                 self.delta_dic[date] = self.delta[date]
                 i += 1
+
 
     @property
     def weekly_commit(self):
@@ -102,14 +101,22 @@ class part_intersection:
 
 class Excel_handler:
 
-
     def __init__(self, path, cut_off_day):
 
-        self.wb = load_workbook(path,data_only=True)
+        # #open the Excel and save it so that value can be calculated
+        # with open(path,'a') as f:
+        #     f.write('2')
+        #     f.close()
+
+        self.wb=load_workbook(path,data_only=True)
+
         self.ws = self.wb.active
         self.part_count = self.part_counts()
         self.date_dic = self.get_calendar_dict()
-        self.CutOffDay=cut_off_day
+        self.CutOffDay = cut_off_day
+
+    # def test_save(self):
+    #     self.wb.save('test.xlsx')
 
     def part_counts(self):
         # count how many parts in workbook
@@ -131,7 +138,7 @@ class Excel_handler:
 
         return date_dic
 
-    #load master data and sp data for each intersection
+    # load master data and sp data for each intersection
 
     def load_data(self):
 
@@ -147,11 +154,11 @@ class Excel_handler:
             onway = self.ws.cell(
                 row=4 + 15 * i,
                 column=column_index_from_string('N')).value
-            vendor_name=self.ws.cell(row=4+15*i,column=2).value
+            vendor_name = self.ws.cell(row=4 + 15 * i, column=2).value
 
             request_list = []
             commit_list = []
-            delta_list=[]
+            delta_list = []
 
             for row in self.ws.iter_rows(
                     min_col=column_index_from_string('O'),
@@ -160,7 +167,7 @@ class Excel_handler:
                 for cell in row:
                     request_list.append(cell.value)
 
-            for row in self.ws.iter_cols(
+            for row in self.ws.iter_rows(
                     min_col=column_index_from_string('O'),
                     min_row=6 + 15 * i,
                     max_row=6 + 15 * i):
@@ -174,11 +181,12 @@ class Excel_handler:
                 for cell in row:
                     delta_list.append(cell.value)
 
-            part = part_intersection(PN, vendorCode, site, hub, onway,vendor_name)
+            part = part_intersection(
+                PN, vendorCode, site, hub, onway, vendor_name)
 
             part.load_request(self.date_dic.keys(), request_list)
             part.load_commit(self.date_dic.keys(), commit_list)
-            part.load_delta(self.date_dic.keys(),delta_list)
+            part.load_delta(self.date_dic.keys(), delta_list)
 
             part.get_aggregate_request(self.CutOffDay, self.date_dic)
             part.get_aggregate_commit(self.CutOffDay, self.date_dic)
@@ -186,12 +194,11 @@ class Excel_handler:
 
             self.part_list.append(part)
 
-
-    def write_to_excel(self,output):
+    def write_to_excel(self, output):
 
         self.load_data()
 
-        if len(self.part_list)==0:
+        if len(self.part_list) == 0:
             return
 
         wb = Workbook()
@@ -209,7 +216,8 @@ class Excel_handler:
             'VMI Onway']
         # calendar
         first_row_data.extend(list(self.part_list[0].weekly_request.keys()))
-        week_days = [self.date_dic[day] for day in self.part_list[0].weekly_request.keys()]
+        week_days = [self.date_dic[day]
+                     for day in self.part_list[0].weekly_request.keys()]
         ws.append(first_row_data)
 
         second_row_data = [
@@ -278,11 +286,15 @@ class Excel_handler:
             cells = ws[n:n]
             if n % 3 == 0:
                 for cell in cells:
-                    cell.fill = PatternFill(fgColor=Color('CCCCFF'), fill_type='solid')
-            elif (n-1)%3==0:
+                    cell.fill = PatternFill(
+                        fgColor=Color('CCCCFF'), fill_type='solid')
+            elif (n - 1) % 3 == 0:
                 for cell in cells:
-                    cell.fill = PatternFill(fgColor=Color('FFFFCC'), fill_type='solid')
+                    cell.fill = PatternFill(
+                        fgColor=Color('FFFFCC'), fill_type='solid')
             else:
                 for cell in cells:
-                    cell.fill=PatternFill(fgColor=Color('5DADD5'),fill_type='solid')
+                    cell.fill = PatternFill(
+                        fgColor=Color('5DADD5'), fill_type='solid')
+
         wb.save(output)
